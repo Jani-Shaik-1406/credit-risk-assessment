@@ -1,0 +1,312 @@
+---
+title: "Project"
+author: "Jani Shariff Shaik"
+date: "2024-04-24"
+output:
+  word_document: default
+  html_document: default
+---
+
+INITIAL PART
+
+Step 1: Data Import and Exploration
+
+```{r}
+library(caret)
+library(glmnet)
+library(pROC)
+library(dplyr)
+
+
+# Load the dataset (replace 'credit_data.csv' with your dataset file name)
+data <- read.csv("C:/Users/janis/OneDrive/Desktop/german_credit_data.csv")
+
+# Explore the structure and summary statistics of the dataset
+str(data)
+
+# Handle missing values
+# Total number of null values in each column
+null_counts <- colSums(is.na(data))
+null_counts
+
+data <- mutate_all(data, ~ ifelse(is.na(.), 'Not Available', .))
+
+
+```
+
+
+
+Question 1:
+What is the impact of employment status (job) on creditworthiness?
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Count frequencies of each job category
+job_counts <- table(data$Job)
+
+# Find job categories with non-zero counts
+non_zero_jobs <- names(job_counts[job_counts > 0])
+
+# Filter data to include only job categories with non-zero counts
+data_filtered <- data[data$Job %in% non_zero_jobs, ]
+
+# Reorder levels of "Job" based on count
+data_filtered$Job <- factor(data_filtered$Job, levels = names(sort(table(data_filtered$Job))))
+
+# Plot the reordered and filtered data with grouped bars
+ggplot(data_filtered, aes(x = Job, fill = Risk)) +
+  geom_bar(position = "dodge", stat = "count") +  # Use position = "dodge" for grouped bars
+  labs(title = "Impact of Job on Creditworthiness", x = "Job", y = "Count") +
+  scale_fill_manual(values = c("good" = "#008000", "bad" = "#d62728")) +
+  theme_minimal()
+
+
+```
+Statistical analysis
+
+```{r}
+# Perform Chi-square test for Job and Risk
+chi_square_job <- chisq.test(table(data_filtered$Job, data_filtered$Risk))
+
+# Print the results
+print("Chi-square test for Job and Risk:")
+print(chi_square_job)
+
+```
+The Chi-square test results indicate that there is no significant association between no of jobs and creditworthiness (Risk) (χ² = 1.8852, df = 3, p = 0.5966, α = 0.05). Thus, we fail to reject the null hypothesis, suggesting that job category does not have a significant impact on credit risk.
+
+
+Question 2 :
+
+Does the type of housing (own, rent, or free) affect the likelihood of good credit risk?
+
+```{r}
+# Reorder levels of "Housing" based on count
+data$Housing <- factor(data$Housing, levels = names(sort(table(data$Housing))))
+
+# Plot the reordered data
+ggplot(data, aes(x = Housing, fill = Risk)) +
+  geom_bar(position = "dodge") +  # Grouped bar plot
+  labs(title = "Impact of Housing Type on Credit Risk",
+       x = "Housing Type", y = "Count") +
+  scale_fill_manual(values = c("good" = "#008000", "bad" = "#d62728")) +  # Color definition
+  theme_minimal()
+
+
+```
+Statistical testing
+
+```{r}
+# Create contingency table for Housing and Risk
+housing_contingency <- table(data$Housing, data$Risk)
+
+# Print contingency table
+print("Contingency table for Housing and Risk:")
+print(housing_contingency)
+
+# Perform Chi-square test for Housing and Risk
+chi_square_housing <- chisq.test(housing_contingency)
+print("Chi-square test for Housing and Risk:")
+print(chi_square_housing)
+
+```
+Contingency Table: The contingency table shows the frequencies of "bad" and "good" credit risks for each housing type (free, rent, own).
+Chi-square Test Result: The chi-square test yielded a test statistic of 18.2 with 2 degrees of freedom and a p-value of 0.0001117.
+Inference: The low p-value (< 0.05) indicates that there is a significant association between housing type and credit risk. Therefore, housing type may be a relevant factor in determining credit risk.
+
+
+Question 3:
+
+How do different levels of saving and checking accounts (e.g., little, moderate, rich) relate to credit risk?
+
+```{r}
+# Load required libraries
+library(dplyr)
+library(ggplot2)
+
+# Create contingency table for Saving.accounts and Risk
+saving_contingency <- table(data$Saving.accounts, data$Risk)
+
+# Print contingency table
+print("Contingency table for Saving.accounts and Risk:")
+print(saving_contingency)
+
+# Perform Chi-square test for Saving.accounts and Risk
+chi_square_saving <- chisq.test(saving_contingency)
+print("Chi-square test for Saving.accounts and Risk:")
+print(chi_square_saving)
+
+# Reorder levels of Saving.accounts based on count
+data$Saving.accounts <- factor(data$Saving.accounts, levels = names(sort(table(data$Saving.accounts))))
+
+# Create bar plot for Saving.accounts and Risk
+saving_plot <- ggplot(data, aes(x = Saving.accounts, fill = Risk)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Credit Risk by Saving Accounts", x = "Saving Accounts", y = "Count") +
+  theme_minimal()
+
+# Print bar plot
+print(saving_plot)
+
+# Create contingency table for Checking.account and Risk
+checking_contingency <- table(data$Checking.account, data$Risk)
+
+# Print contingency table
+print("Contingency table for Checking.account and Risk:")
+print(checking_contingency)
+
+# Perform Chi-square test for Checking.account and Risk
+chi_square_checking <- chisq.test(checking_contingency)
+print("Chi-square test for Checking.account and Risk:")
+print(chi_square_checking)
+
+# Reorder levels of Checking.account based on count
+data$Checking.account <- factor(data$Checking.account, levels = names(sort(table(data$Checking.account))))
+
+# Create bar plot for Checking.account and Risk
+checking_plot <- ggplot(data, aes(x = Checking.account, fill = Risk)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Credit Risk by Checking Account", x = "Checking Account", y = "Count") +
+  theme_minimal()
+
+# Print bar plot
+print(checking_plot)
+
+```
+Inference for above output:
+
+Saving Accounts and Credit Risk:
+The contingency table shows the distribution of credit risk ("good" and "bad") among different levels of saving accounts.
+The Chi-square test indicates a significant association between saving accounts and credit risk (X-squared = 36.099, df = 4, p-value = 2.761e-07). This suggests that there is a relationship between the level of saving accounts and credit risk.
+From the contingency table, we observe that individuals with "little" savings have a higher proportion of both "good" and "bad" credit risks compared to other categories.
+Checking Account and Credit Risk:
+The contingency table illustrates the distribution of credit risk ("good" and "bad") across different levels of checking accounts.
+The Chi-square test indicates a highly significant association between checking accounts and credit risk (X-squared = 123.72, df = 3, p-value < 2.2e-16). This suggests a strong relationship between the level of checking accounts and credit risk.
+Notably, individuals with "moderate" and "Not Available" checking accounts have a higher proportion of "bad" credit risk compared to other categories.
+In summary, both saving and checking accounts show significant associations with credit risk. Individuals with certain levels of saving and checking accounts may exhibit different credit risk profiles, highlighting the importance of these financial factors in assessing creditworthiness. Further analysis and modeling could provide insights into the specific impact of saving and checking accounts on credit risk prediction.
+
+Question 4:
+
+What is the relationship between the amount of credit requested and credit risk?
+
+```{r}
+# Load required libraries
+library(ggplot2)
+
+# Statistical Test (Wilcoxon rank-sum test)
+test_result <- wilcox.test(Credit.amount ~ Risk, data = data)
+print("Wilcoxon rank-sum test:")
+print(test_result)
+
+```
+Other test:
+```{r}
+# Load required libraries
+library(ggplot2)
+
+# Perform chi-square goodness-of-fit test
+chisq_test <- chisq.test(data$Credit.amount, y = data$Risk)
+print("Chi-square goodness-of-fit test for Credit.amount and Risk:")
+print(chisq_test)
+
+```
+ardam kani code:
+```{r}
+# Load required libraries
+library(ggplot2)
+library(broom)
+
+data$Risk <- ifelse(data$Risk == "good", 0, 1)
+
+# Fit logistic regression model
+logistic_model <- glm(Risk ~ Credit.amount, data = data, family = binomial)
+
+# Extract model coefficients
+model_summary <- tidy(logistic_model)
+
+# Calculate odds ratio (exponentiate coefficient)
+odds_ratio <- exp(model_summary$estimate)
+
+# Calculate log odds ratio (log of odds ratio)
+log_odds_ratio <- log(odds_ratio)
+
+# Print log odds ratio
+print("Log Odds Ratio:")
+print(log_odds_ratio)
+
+# Plot the relationship between credit amount and probability of good credit risk
+ggplot(data, aes(x = Credit.amount, y = Risk, color = Risk)) +
+  geom_point() +
+  geom_smooth(method = "glm", method.args = list(family = "binomial")) +
+  labs(title = "Relationship Between Credit Amount and Credit Risk",
+       x = "Credit Amount", y = "Risk Probability")
+
+
+```
+
+The output of the Wilcoxon rank-sum test indicates that there is a statistically significant difference in the amount of credit requested between different credit risk categories (p-value = 0.005918). The alternative hypothesis suggests that the true location shift is not equal to 0, meaning there is a shift or difference in the median credit amount between the credit risk categories.
+
+Based on this result, we can infer that the amount of credit requested is likely to have a significant impact on credit risk. Customers with different credit risk levels tend to request different amounts of credit. However, further analysis may be needed to understand the direction and magnitude of this relationship and its practical implications for credit risk assessment and management.
+
+
+Step 1: Correlation Analysis
+```{r}
+# Calculate correlation coefficient
+correlation <- cor(data$Credit.amount, as.numeric(data$Risk == "bad"))
+
+# Print correlation coefficient
+print(paste("Correlation Coefficient:", correlation))
+
+```
+Step 2: Regression Analysis
+```{r}
+# Perform linear regression
+linear_model <- lm(data$Credit.amount ~ as.factor(data$Risk))
+
+# Print summary of regression model
+summary(linear_model)
+```
+MOdel :
+```{r}
+# Load the required library
+library(VGAM)
+
+# Fit a vglm baseline model
+baseline_model <- vglm(Risk ~ Age + Job + Housing + Saving.accounts + Checking.account + Credit.amount + Duration + Purpose, 
+                       family = multinomial,
+                       data = data)
+
+# Print the summary of the model
+summary(baseline_model)
+
+
+```
+Sure, let's interpret the output in detail:
+
+1. **Coefficients**:
+   - **Intercept**: The estimated log odds of the reference category (level 2) of the response variable (Risk) when all predictor variables are zero.
+   - **Age**: For a one-unit increase in age, the log odds of the outcome variable (Risk) decrease by approximately 0.016.
+   - **Job**: The coefficient represents the change in the log odds of the outcome for a one-unit increase in the Job variable. However, it is not statistically significant (p > 0.05), so its effect is uncertain.
+   - **Housingrent**: The coefficient indicates the change in the log odds of the outcome when the housing type is rent compared to the reference category (own). However, it is not statistically significant (p > 0.05).
+   - **Housingown**: Similar interpretation as Housingrent.
+   - **Saving.accounts**: The coefficients represent the change in log odds associated with different levels of the Saving.accounts variable compared to the reference category. Only the category 'little' is statistically significant (p < 0.05).
+   - **Checking.account**: Similar interpretation as Saving.accounts. The category 'little' is statistically significant (p < 0.05).
+   - **Credit.amount**: The coefficient represents the change in the log odds of the outcome for a one-unit increase in Credit.amount. However, it is not statistically significant (p > 0.05).
+   - **Duration**: For a one-unit increase in Duration, the log odds of the outcome variable (Risk) increase by approximately 0.035.
+   - **Purpose**: The coefficients represent the change in log odds associated with different levels of the Purpose variable compared to the reference category. None of the categories are statistically significant (p > 0.05).
+
+2. **Residual deviance**: The residual deviance measures how well the model fits the observed data. A lower value indicates a better fit. In this case, the residual deviance is 1013.433 on 979 degrees of freedom.
+
+3. **Log-likelihood**: The log-likelihood is a measure of how well the model predicts the observed data. A higher log-likelihood value indicates a better fit. In this case, the log-likelihood is -506.7165 on 979 degrees of freedom.
+
+4. **Number of Fisher scoring iterations**: This indicates the number of iterations performed by the Fisher scoring algorithm to estimate the model parameters. In this case, there were 5 iterations.
+
+5. **No Hauck-Donner effect found**: This indicates that there is no evidence of a Hauck-Donner effect, which means that the estimates are stable and reliable.
+
+Overall, the model suggests that age, duration, and certain categories of saving and checking accounts have a significant association with credit risk, while other variables such as job, housing, and credit amount do not show a significant association. However, it's essential to consider the practical significance of these findings in addition to their statistical significance.
+
+
+
+
+Bear in mind that the estimates from logistic regression characterize the relationship between the predictor and response variable on a log-odds scale. For example, this model suggests that for every one unit increase in Age, the log-odds of the consumer having good credit increases by 0.018. Because this isn’t of much practical value, we’ll ussually want to use the exponential function to calculate the odds ratios for each preditor.
